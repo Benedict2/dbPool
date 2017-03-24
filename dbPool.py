@@ -40,6 +40,22 @@ class dbPool(object):
 		print('Oracle cursor set down!')
 
 	@staticmethod
+	def get_instance(db_info):
+		if dbPool._pool is None:
+			dbPool._pool = dbPool(db_info)
+		else:
+			raise TypeError('dbPool could be instantiated only once!')
+		return dbPool._pool
+		
+#	def __new__(cls, *args, **kwargs):
+#		if cls._pool is None:
+#			cls._pool = super(dbPool, cls).__new__(cls, *args, **kwargs)
+#		else:
+#			raise TypeError('[%s] could be instantiated only once!'%cls.__name__)
+#		return cls._pool
+
+
+	@staticmethod
 	def setPool(db_info):
 		"""
 		@register DBPool cache
