@@ -27,8 +27,6 @@ class dbPool(object):
 		@switch=1 : get shareConn
 		@switch=0 : get privateConn
 		"""
-		super(dbPool, self).__init__()
-		self.db_info = db_info
 		self._pool = dbPool.setPool(db_info)
 		if(switch == 0):
 			self._conn = self._pool.connection(0)
