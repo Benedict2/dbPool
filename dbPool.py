@@ -8,6 +8,7 @@ date:2017.2.24
 	1.2:add staticmethod setPool()
 	1.3:factor functions
 	1.4:fix some bugs: columns(). add function execInsert()  date:2017.3.4
+	1.5:add singleton pattern date:2017.3.24
 """
 
 from DBUtils.PooledDB import PooledDB
