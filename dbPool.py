@@ -1,26 +1,28 @@
 # -*- coding:utf-8 -*-
 
 """
-date:2017.2.24
-@author:xnchall
-@version 1.4
+date:2017.3.24
+@author:likai
+@version 1.6
 	1.0:dbPool()
 	1.2:add staticmethod setPool()
 	1.3:factor functions
 	1.4:fix some bugs: columns(). add function execInsert()  date:2017.3.4
-	1.5:add singleton pattern date:2017.3.24
+	1.5:singleton pattern
+	1.6:add mysql interface
 """
 
 from DBUtils.PooledDB import PooledDB
 import sys
 import cx_Oracle
+import pymysql
 import threading
 import datetime
-
 
 class dbPool(object):
 
 	_pool = None
+	db_type = "cx_Oracle"#default connect oracle
 
 	def __init__(self,db_info={},switch=1):
 		"""
@@ -36,23 +38,22 @@ class dbPool(object):
 			self._conn = self._pool.connection()
 			print('the shareConn set down!')
 		self._cursor = self._conn.cursor()
-		print('Oracle cursor set down!')
 
 	@staticmethod
 	def get_instance(db_info):
-		if dbPool._pool is None:
+		# if dbPool._pool is None:
+		if(dbPool._pool is None or db_info['dbType'] == 'pymysql'):
 			dbPool._pool = dbPool(db_info)
 		else:
 			raise TypeError('dbPool could be instantiated only once!')
 		return dbPool._pool
-		
-#	def __new__(cls, *args, **kwargs):
+
+#	def __new__(cls, db_info={},switch=1):
 #		if cls._pool is None:
-#			cls._pool = super(dbPool, cls).__new__(cls, *args, **kwargs)
+#			cls._pool = super(dbPool, cls).__new__(cls, db_info={},switch=1)
 #		else:
 #			raise TypeError('[%s] could be instantiated only once!'%cls.__name__)
 #		return cls._pool
-
 
 	@staticmethod
 	def setPool(db_info):
@@ -60,23 +61,47 @@ class dbPool(object):
 		@register DBPool cache
 		@set the pool param
 		"""
-		if dbPool._pool is None:
+		if(dbPool._pool is None or db_info['dbType'] == 'pymysql'):
 			print("register a new connection ...")
-			print("dbPool is setting ...")
-			start = datetime.datetime.now()
-			pool = PooledDB(cx_Oracle,
-            		user = db_info['user'],
-            		password = db_info['passwd'],
-            		dsn = "%s:%s/%s" %(db_info['host'],db_info['port'],db_info['dbName']),
-            		mincached=2,
-            		maxcached=2,
-            		maxshared=2,
-            		maxconnections=2)
 			print("dns = %s:%s/%s" %(db_info['host'],db_info['port'],db_info['dbName']))
-			end = datetime.datetime.now()
-			print("set dbPool'cache need time: %s s" %(end-start))
-			print('set down!')
-		return pool
+			start = datetime.datetime.now()
+			#db_info doesn't has "dbType" key default set oracle
+			if('dbType' not in db_info.keys() or db_info['dbType'] == dbPool.db_type):
+				#connect oracle instance _cursor
+				print("dbDrive is [cx_Oracle]")
+				pool = PooledDB(creator = cx_Oracle,
+						user = db_info['user'],
+						password = db_info['passwd'],
+						dsn = "%s:%s/%s" %(db_info['host'],db_info['port'],db_info['dbName']),
+						mincached=2,
+						maxcached=5,
+						maxshared=5,
+						maxconnections=5
+					)
+				end = datetime.datetime.now()
+				print("set oracle dbPool cache need time: %s s" %(end-start))
+				#return pool_oracle
+			else:
+				#connect mysql instance cursor
+				print("dbDrive is [pymysql]")
+				pool = PooledDB(creator = pymysql,
+						user = db_info['user'],
+						password = db_info['passwd'],
+						port = int(db_info['port']),#必须是int型
+						host = db_info['host'],
+						db = db_info['dbName'],
+						mincached = 2,
+						maxcached = 2,
+						maxshared = 2,
+						maxconnections = 2,
+						charset = db_info['charset']#mysql必须指定资源编码，否则会乱码
+					)
+				end = datetime.datetime.now()
+				print("set mysql dbPool cache need time: %s s" %(end-start))
+				#return pool_mysql
+			return pool
+		else:
+			return dbPool._pool
 
 	def columns(self,table):
 		"""
@@ -84,8 +109,8 @@ class dbPool(object):
 		@return: list
 		"""
 		sql = ["select lower(column_name)column_name \
-        	from all_tab_columns where table_name=upper('%(table)s')"]
-		print(''.join(sql) % locals())
+			from all_tab_columns where table_name=upper('%(table)s')"]
+		#print(''.join(sql) % locals())
 		rows = self.execQuery(''.join(sql) % locals())
 		columns_list = [k["column_name"] for k in rows]
 		return columns_list
@@ -233,8 +258,8 @@ class dbPool(object):
 		where_dict = self.create_params(table,where_dict)
 		where_stmt = ' and '.join([ '%s=:%s' %(k,k) for k in where_dict.keys() ])
 		del_sql = 'DELETE FROM %(table)s where %(where_stmt)s'
-		print(del_sql % locals())
-		print(where_dict)
+		# print(del_sql % locals())
+		# print(where_dict)
 		self.execute(del_sql % locals(), where_dict)
 		return self.getRowsNum()
 
