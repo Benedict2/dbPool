@@ -2,7 +2,7 @@
 
 """
 date:2017.3.24
-@author:likai
+@author:xnchall
 @version 1.6
 	1.0:dbPool()
 	1.2:add staticmethod setPool()
